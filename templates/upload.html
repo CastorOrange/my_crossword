@@ -4,13 +4,13 @@
 <div class="container">
     <div class="header">
         <h1>🧩 Mot Fléché Interactif</h1>
-        <p>Uploadez votre fichier .htm Excel pour créer votre mot fléché interactif</p>
+        <p>Uploadez votre fichier .xlsx Excel pour créer votre mot fléché interactif</p>
     </div>
     
     <div class="content">
         <div style="text-align: center; margin: 50px 0;">
             <div id="upload-area" style="
-                border: 3px dashed #4CAF50;
+                border: 3px dashed #e86c1a;
                 border-radius: 20px;
                 padding: 60px 20px;
                 background: #f8f9fa;
@@ -40,9 +40,8 @@
                         <li>Cases avec définitions et flèches (→ pour horizontal, ↓ pour vertical)</li>
                     </ul>
                 </li>
-                <li><strong>Enregistrez au format HTML</strong> : Fichier → Enregistrer sous → Page Web (.htm)</li>
-                <li><strong>Uploadez le fichier</strong> en utilisant le formulaire ci-dessus</li>
-                <li><strong>Partagez le lien</strong> généré avec vos amis pour qu'ils puissent jouer</li>
+                <li><strong>Uploadez le fichier .xlsx</strong> en utilisant le formulaire ci-dessus</li>
+                <li><strong>Partagez le lien</strong> généré</li>
             </ol>
             
             <div style="margin-top: 30px; padding: 20px; background: #e3f2fd; border-radius: 10px; border-left: 5px solid #2196F3;">
@@ -52,6 +51,7 @@
                     <li>Placez les définitions dans les cases noires adjacentes aux mots</li>
                     <li>Numérotez vos définitions pour une meilleure organisation</li>
                     <li>Évitez les cellules fusionnées complexes</li>
+                    <li>Délimitez votre grille en mettant des '#' à l'extérieur</li>
                 </ul>
             </div>
         </div>
@@ -66,18 +66,18 @@ const status = document.getElementById('status');
 // Drag & drop functionality
 uploadArea.addEventListener('dragover', (e) => {
     e.preventDefault();
-    uploadArea.style.borderColor = '#45a049';
-    uploadArea.style.background = '#e8f5e8';
+    uploadArea.style.borderColor = '#e87527';
+    uploadArea.style.background = '#f29455';
 });
 
 uploadArea.addEventListener('dragleave', (e) => {
-    uploadArea.style.borderColor = '#4CAF50';
+    uploadArea.style.borderColor = '#e86c1a';
     uploadArea.style.background = '#f8f9fa';
 });
 
 uploadArea.addEventListener('drop', (e) => {
     e.preventDefault();
-    uploadArea.style.borderColor = '#4CAF50';
+    uploadArea.style.borderColor = '#e86c1a';
     uploadArea.style.background = '#f8f9fa';
     
     const files = e.dataTransfer.files;
@@ -97,11 +97,6 @@ fileInput.addEventListener('change', (e) => {
 });
 
 function handleFile(file) {
-<!--    if (!file.name.toLowerCase().endsWith('.htm') && !file.name.toLowerCase().endsWith('.html')) {-->
-<!--        showStatus('❌ Veuillez sélectionner un fichier .htm ou .html', 'error');-->
-<!--        return;-->
-<!--    }-->
-    
     showStatus('📤 Upload en cours...', 'info');
     
     const formData = new FormData();

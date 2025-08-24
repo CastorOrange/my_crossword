@@ -102,7 +102,7 @@
             border: none;
             background: transparent;
             text-align: center;
-            font-size: 16px;
+            font-size: 20px;
             font-weight: bold;
             text-transform: uppercase;
             outline: none;
@@ -129,7 +129,7 @@
         }
 
         .btn {
-            background: linear-gradient(45deg, #4CAF50, #45a049);
+            background: linear-gradient(45deg, #f29455, #e87527);
             color: white;
             border: none;
             padding: 10px 20px;
@@ -163,11 +163,12 @@
             border-radius: 10px;
             overflow: hidden;
             height: 20px;
+            width: 100%;
             margin: 20px 0;
         }
 
         .progress-fill {
-            background: linear-gradient(45deg, #4CAF50, #45a049);
+            background: linear-gradient(45deg, #f29455, #e87527);
             height: 100%;
             transition: width 0.3s ease;
             display: flex;
@@ -191,7 +192,7 @@
             background: white;
             padding: 10px;
             border-radius: 8px;
-            border: 2px dashed #4CAF50;
+            border: 2px dashed #f29455;
             font-family: monospace;
             word-break: break-all;
             margin: 10px 0;
@@ -267,9 +268,9 @@
 
             <div class="status" id="status"></div>
 
-<!--            <div class="progress-bar">-->
-<!--                <div class="progress-fill" id="progress" style="width: 0%">0%</div>-->
-<!--            </div>-->
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress" style="width: 0%">0%</div>
+            </div>
 
             <div class="debug-info" id="debugInfo" style="display: none;"></div>
 
@@ -674,7 +675,7 @@ Navigateur: ${navigator.userAgent}
         document.addEventListener('DOMContentLoaded', function() {
             try {
                 createGrid();
-                // loadProgress(); // Commenté pour éviter les erreurs API au début
+                loadProgress(); // Commenté pour éviter les erreurs API au début
             } catch (error) {
                 console.error("Erreur lors de l'initialisation:", error);
                 showStatus('❌ Erreur lors de l\'initialisation', 'error');
