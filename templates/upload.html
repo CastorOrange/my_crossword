@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>🧩 Mot Fléché Interactif</h1>
+        <p>Uploadez votre fichier .htm Excel pour créer votre mot fléché interactif</p>
+    </div>
+    
+    <div class="content">
+        <div style="text-align: center; margin: 50px 0;">
+            <div id="upload-area" style="
+                border: 3px dashed #4CAF50;
+                border-radius: 20px;
+                padding: 60px 20px;
+                background: #f8f9fa;
+                transition: all 0.3s ease;
+                cursor: pointer;
+            ">
+                <div style="font-size: 4em; margin-bottom: 20px;">📄</div>
+                <h3>Glissez-déposez votre fichier .xlsx ici</h3>
+                <p style="color: #666; margin: 20px 0;">ou cliquez pour sélectionner un fichier</p>
+                <input type="file" id="file-input" accept=".xlsx" style="display: none;">
+                <div class="btn" >
+<!--                    onclick="document.getElementById('file-input').click()"-->
+                    📁 Choisir un fichier
+                </div>
+            </div>
+            
+            <div id="status" style="margin-top: 30px; font-size: 18px;"></div>
+        </div>
+        
+        <div style="margin-top: 50px; padding: 30px; background: #f8f9fa; border-radius: 15px;">
+            <h3 style="color: #333; margin-bottom: 20px;">📋 Instructions</h3>
+            <ol style="line-height: 1.8; color: #555;">
+                <li><strong>Créez votre grille</strong> dans Excel avec :
+                    <ul style="margin: 10px 0 10px 30px;">
+                        <li>Cases blanches pour les lettres à remplir</li>
+                        <li>Cases noires (fond noir) pour les séparateurs</li>
+                        <li>Cases avec définitions et flèches (→ pour horizontal, ↓ pour vertical)</li>
+                    </ul>
+                </li>
+                <li><strong>Enregistrez au format HTML</strong> : Fichier → Enregistrer sous → Page Web (.htm)</li>
+                <li><strong>Uploadez le fichier</strong> en utilisant le formulaire ci-dessus</li>
+                <li><strong>Partagez le lien</strong> généré avec vos amis pour qu'ils puissent jouer</li>
+            </ol>
+            
+            <div style="margin-top: 30px; padding: 20px; background: #e3f2fd; border-radius: 10px; border-left: 5px solid #2196F3;">
+                <h4 style="color: #1565C0; margin-bottom: 15px;">💡 Conseils pour une meilleure détection</h4>
+                <ul style="color: #0277BD; line-height: 1.6;">
+                    <li>Utilisez des flèches Unicode : → (Alt+26) pour horizontal, ↓ (Alt+25) pour vertical</li>
+                    <li>Placez les définitions dans les cases noires adjacentes aux mots</li>
+                    <li>Numérotez vos définitions pour une meilleure organisation</li>
+                    <li>Évitez les cellules fusionnées complexes</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const uploadArea = document.getElementById('upload-area');
+const fileInput = document.getElementById('file-input');
+const status = document.getElementById('status');
+
+// Drag & drop functionality
+uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.style.borderColor = '#45a049';
+    uploadArea.style.background = '#e8f5e8';
+});
+
+uploadArea.addEventListener('dragleave', (e) => {
+    uploadArea.style.borderColor = '#4CAF50';
+    uploadArea.style.background = '#f8f9fa';
+});
+
+uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.style.borderColor = '#4CAF50';
+    uploadArea.style.background = '#f8f9fa';
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        handleFile(files[0]);
+    }
+});
+
+uploadArea.addEventListener('click', () => {
+    fileInput.click();
+});
+
+fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+        handleFile(e.target.files[0]);
+    }
+});
+
+function handleFile(file) {
+<!--    if (!file.name.toLowerCase().endsWith('.htm') && !file.name.toLowerCase().endsWith('.html')) {-->
+<!--        showStatus('❌ Veuillez sélectionner un fichier .htm ou .html', 'error');-->
+<!--        return;-->
+<!--    }-->
+    
+    showStatus('📤 Upload en cours...', 'info');
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    fetch('/upload', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showStatus('✅ Fichier traité avec succès ! Redirection...', 'success');
+            setTimeout(() => {
+                window.location.href = data.redirect;
+            }, 1500);
+        } else {
+            showStatus('❌ ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        showStatus('❌ Erreur lors de l\'upload: ' + error.message, 'error');
+    });
+}
+
+function showStatus(message, type) {
+    status.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+}
+</script>
+{% endblock %}

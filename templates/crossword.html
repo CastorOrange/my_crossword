@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mots Fléchés</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .crossword-container {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .grid-container {
+            flex: 1;
+            min-width: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .crossword-grid {
+            display: inline-block;
+            border: 3px solid #333;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .grid-row {
+            display: flex;
+        }
+
+        .grid-cell {
+            width: 80px;
+            height: 80px;
+            border: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .grid-cell.black {
+            background-color: #333;
+            color: white;
+            font-size: 10px;
+            text-align: center;
+            line-height: 1.1;
+            word-break: break-word;
+            hyphens: auto;
+            overflow: hidden;
+        }
+
+        .grid-cell.white {
+            background-color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .grid-cell.white:hover {
+            background-color: #e3f2fd;
+        }
+
+        .grid-cell.selected {
+            background-color: #2196f3 !important;
+            color: white;
+        }
+
+        .grid-cell input {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: transparent;
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            text-transform: uppercase;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .grid-cell .number {
+            position: absolute;
+            top: 1px;
+            left: 2px;
+            font-size: 8px;
+            font-weight: bold;
+            color: #666;
+            line-height: 1;
+        }
+
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .btn.secondary {
+            background: linear-gradient(45deg, #6c757d, #5a6268);
+        }
+
+        .status {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 18px;
+            font-weight: bold;
+            min-height: 30px;
+        }
+
+        .progress-bar {
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            height: 20px;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            height: 100%;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .share-section {
+            background: rgba(255,255,255,0.9);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .share-url {
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px dashed #4CAF50;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-info {
+            background-color: #cce7ff;
+            color: #004085;
+            border: 1px solid #b3d7ff;
+        }
+
+        .debug-info {
+            background: rgba(255,255,255,0.9);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+
+        @media (max-width: 1080px) {
+            .crossword-container {
+                flex-direction: column;
+            }
+
+            .grid-cell {
+                width: 35px;
+                height: 35px;
+                font-size: 12px;
+            }
+
+            .grid-cell.black {
+                font-size: 7px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧩 Votre Mot Fléché</h1>
+            <p>Remplissez les cases blanches - une lettre par case</p>
+        </div>
+
+        <div class="content">
+            <div class="controls">
+                <button class="btn" onclick="saveProgress()">💾 Sauvegarder</button>
+                <button class="btn secondary" onclick="loadProgress()">📁 Charger</button>
+                <button class="btn secondary" onclick="clearGrid()">🗑️ Effacer</button>
+                <button class="btn secondary" onclick="newGrid()">🏠 Nouveau</button>
+                <button class="btn secondary" onclick="toggleDebug()">🔍 Debug</button>
+                <button class="btn secondary" onclick="copyShareUrl()">📋 Copier le lien</button>
+            </div>
+
+            <div class="status" id="status"></div>
+
+<!--            <div class="progress-bar">-->
+<!--                <div class="progress-fill" id="progress" style="width: 0%">0%</div>-->
+<!--            </div>-->
+
+            <div class="debug-info" id="debugInfo" style="display: none;"></div>
+
+<!--            <div class="share-section">-->
+<!--                <h4>🔗 Partager cette grille</h4>-->
+<!--                <p>Copiez cette URL pour partager avec vos amis :</p>-->
+<!--                <div class="share-url" id="shareUrl">{% if request %}{{ request.url }}{% else %}URL de partage{% endif %}</div>-->
+<!--                <button class="btn secondary" onclick="copyShareUrl()">📋 Copier le lien</button>-->
+<!--            </div>-->
+
+            <div class="crossword-container">
+                <div class="grid-container">
+                    <div class="crossword-grid" id="crosswordGrid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Debug: Affichage des données reçues
+        console.log("=== DONNÉES REÇUES ===");
+        let gridData = {{ grid | tojsonfilter | safe }};
+        let cluesData = {{ clues | tojsonfilter | safe }};
+        let gridId = '{{ grid_id if grid_id else "default" }}';
+
+        try {
+            // Données chargées depuis Flask via Jinja2
+
+            console.log("Grid Data:", gridData);
+            console.log("Clues Data:", cluesData);
+            console.log("Grid ID:", gridId);
+
+            // Vérification du type et de la structure
+            console.log("Grid type:", typeof gridData, "Length:", gridData ? gridData.length : "undefined");
+            console.log("Clues type:", typeof cluesData, "Length:", cluesData ? cluesData.length : "undefined");
+
+        } catch (error) {
+            console.error("Erreur lors du chargement des données:", error);
+            showStatus('❌ Erreur lors du chargement des données', 'error');
+
+            // Données de fallback pour test
+            const gridData = [
+                ['#', '', '#', '', '#', ''],
+                ['#', '', '#', '', '#', ''],
+                ['#', '', '#', '', '#', '']
+            ];
+            const cluesData = [
+                {row: 0, col: 0, text: 'Test ↴\nDéfinition ↓'}
+            ];
+            const gridId = 'fallback';
+        }
+
+        let selectedCell = null;
+        let currentDirection = 'horizontal';
+
+        function toggleDebug() {
+            const debugInfo = document.getElementById('debugInfo');
+            if (debugInfo.style.display === 'none') {
+                debugInfo.style.display = 'block';
+                debugInfo.textContent = `
+DONNÉES DE DEBUG:
+================
+
+Grid Data: ${JSON.stringify(gridData, null, 2)}
+
+Clues Data: ${JSON.stringify(cluesData, null, 2)}
+
+Grid ID: ${gridId}
+
+Navigateur: ${navigator.userAgent}
+                `;
+            } else {
+                debugInfo.style.display = 'none';
+            }
+        }
+
+        // Créer un objet de lookup pour les définitions
+        function createCluesLookup() {
+            const lookup = {};
+            if (cluesData && Array.isArray(cluesData)) {
+                cluesData.forEach(clue => {
+                    const key = `${clue.row}-${clue.col}`;
+                    lookup[key] = clue.text;
+                });
+            }
+            return lookup;
+        }
+
+        function createGrid() {
+            const grid = document.getElementById('crosswordGrid');
+            grid.innerHTML = '';
+
+            if (!gridData || !Array.isArray(gridData)) {
+                grid.innerHTML = '<div style="color: red; padding: 20px;">❌ Erreur: Données de grille invalides</div>';
+                return;
+            }
+
+            const cluesLookup = createCluesLookup();
+            console.log("Clues Lookup:", cluesLookup);
+
+            for (let row = 0; row < gridData.length; row++) {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'grid-row';
+
+                if (!Array.isArray(gridData[row])) {
+                    console.error(`Ligne ${row} n'est pas un tableau:`, gridData[row]);
+                    continue;
+                }
+
+                for (let col = 0; col < gridData[row].length; col++) {
+                    const cellValue = gridData[row][col];
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+
+                    if (cellValue === '#') {
+                        // Case noire avec définition
+                        cell.classList.add('black');
+                        const clueKey = `${row}-${col}`;
+                        const clueText = cluesLookup[clueKey];
+                        if (clueText) {
+                            cell.innerHTML = clueText.replace(/\n/g, '<br>');
+                        } else {
+                            cell.innerHTML = '●'; // Point si pas de définition
+                        }
+                    } else if (cellValue === '' || cellValue === null || cellValue === undefined) {
+                        // Case blanche pour saisie
+                        cell.classList.add('white');
+
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.maxLength = 1;
+                        input.addEventListener('input', handleInput);
+                        input.addEventListener('keydown', handleKeydown);
+                        input.addEventListener('click', () => selectCell(row, col));
+
+                        cell.appendChild(input);
+                    } else {
+                        // Case avec une lettre préremplie
+                        cell.classList.add('white');
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.maxLength = 1;
+                        input.value = cellValue;
+                        input.addEventListener('input', handleInput);
+                        input.addEventListener('keydown', handleKeydown);
+                        input.addEventListener('click', () => selectCell(row, col));
+
+                        cell.appendChild(input);
+                    }
+
+                    rowDiv.appendChild(cell);
+                }
+
+                grid.appendChild(rowDiv);
+            }
+
+            updateProgress();
+            showStatus(`✅ Grille créée: ${gridData.length}x${gridData[0] ? gridData[0].length : 0}`, 'success');
+        }
+
+        function handleInput(event) {
+            const char = event.target.value.toUpperCase();
+            if (!/^[A-ZÀ-ÿ]$/.test(char) && char !== '') {
+                event.target.value = '';
+                return;
+            }
+
+            event.target.value = char;
+            updateProgress();
+
+            if (char) {
+                moveToNextCell();
+            }
+        }
+
+        function handleKeydown(event) {
+            const row = parseInt(event.target.parentElement.dataset.row);
+            const col = parseInt(event.target.parentElement.dataset.col);
+
+            switch(event.key) {
+                case 'ArrowUp':
+                    event.preventDefault();
+                    moveVertical(row, col, -1);
+                    break;
+                case 'ArrowDown':
+                    event.preventDefault();
+                    moveVertical(row, col, 1);
+                    break;
+                case 'ArrowLeft':
+                    event.preventDefault();
+                    moveHorizontal(row, col, -1);
+                    break;
+                case 'ArrowRight':
+                    event.preventDefault();
+                    moveHorizontal(row, col, 1);
+                    break;
+                case 'Backspace':
+                    if (event.target.value === '') {
+                        moveToPreviousCell();
+                    }
+                    break;
+                case 'Tab':
+                    event.preventDefault();
+                    currentDirection = currentDirection === 'horizontal' ? 'vertical' : 'horizontal';
+                    break;
+            }
+        }
+
+        function selectCell(row, col) {
+            if (selectedCell) {
+                selectedCell.classList.remove('selected');
+            }
+
+            const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+            if (cell && cell.classList.contains('white')) {
+                selectedCell = cell;
+                cell.classList.add('selected');
+                cell.querySelector('input').focus();
+            }
+        }
+
+        function moveToNextCell() {
+            if (!selectedCell) return;
+
+            const row = parseInt(selectedCell.dataset.row);
+            const col = parseInt(selectedCell.dataset.col);
+
+            if (currentDirection === 'horizontal') {
+                moveHorizontal(row, col, 1);
+            } else {
+                moveVertical(row, col, 1);
+            }
+        }
+
+        function moveToPreviousCell() {
+            if (!selectedCell) return;
+
+            const row = parseInt(selectedCell.dataset.row);
+            const col = parseInt(selectedCell.dataset.col);
+
+            if (currentDirection === 'horizontal') {
+                moveHorizontal(row, col, -1);
+            } else {
+                moveVertical(row, col, -1);
+            }
+        }
+
+        function moveHorizontal(row, col, direction) {
+            let newCol = col + direction;
+
+            while (newCol >= 0 && newCol < gridData[row].length) {
+                if (gridData[row][newCol] === '' || gridData[row][newCol] === null || gridData[row][newCol] === undefined) {
+                    selectCell(row, newCol);
+                    currentDirection = 'horizontal';
+                    return;
+                }
+                newCol += direction;
+            }
+        }
+
+        function moveVertical(row, col, direction) {
+            let newRow = row + direction;
+
+            while (newRow >= 0 && newRow < gridData.length) {
+                if (gridData[newRow] && (gridData[newRow][col] === '' || gridData[newRow][col] === null || gridData[newRow][col] === undefined)) {
+                    selectCell(newRow, col);
+                    currentDirection = 'vertical';
+                    return;
+                }
+                newRow += direction;
+            }
+        }
+
+        function updateProgress() {
+            let total = 0;
+            let filled = 0;
+
+            for (let row = 0; row < gridData.length; row++) {
+                for (let col = 0; col < gridData[row].length; col++) {
+                    if (gridData[row][col] === '' || gridData[row][col] === null || gridData[row][col] === undefined) {
+                        total++;
+                        const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                        const input = cell ? cell.querySelector('input') : null;
+                        if (input && input.value.trim()) {
+                            filled++;
+                        }
+                    }
+                }
+            }
+
+            const percentage = total > 0 ? Math.round((filled / total) * 100) : 0;
+            const progressBar = document.getElementById('progress');
+            progressBar.style.width = percentage + '%';
+            progressBar.textContent = percentage + '%';
+        }
+
+        function saveProgress() {
+            const progress = {};
+
+            for (let row = 0; row < gridData.length; row++) {
+                for (let col = 0; col < gridData[row].length; col++) {
+                    if (gridData[row][col] === '' || gridData[row][col] === null || gridData[row][col] === undefined) {
+                        const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                        const input = cell ? cell.querySelector('input') : null;
+                        if (input && input.value) {
+                            progress[`${row}-${col}`] = input.value;
+                        }
+                    }
+                }
+            }
+
+            // Appel API vers votre backend Flask
+            fetch(`/api/save_progress/${gridId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(progress)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showStatus('✅ Progression sauvegardée !', 'success');
+                } else {
+                    showStatus('❌ Erreur lors de la sauvegarde', 'error');
+                }
+            })
+            .catch(error => {
+                console.log('Sauvegarde locale:', progress);
+                showStatus('✅ Progression sauvegardée localement !', 'success');
+            });
+        }
+
+        function loadProgress() {
+            // Appel API vers votre backend Flask
+            fetch(`/api/load_progress/${gridId}`)
+            .then(response => response.json())
+            .then(data => {
+                const progress = data.progress || {};
+
+                for (const [key, value] of Object.entries(progress)) {
+                    const [row, col] = key.split('-').map(Number);
+                    const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                    if (cell) {
+                        const input = cell.querySelector('input');
+                        if (input) {
+                            input.value = value;
+                        }
+                    }
+                }
+
+                updateProgress();
+                showStatus('✅ Progression chargée !', 'success');
+            })
+            .catch(error => {
+                showStatus('❌ Erreur lors du chargement', 'error');
+            });
+        }
+
+        function clearGrid() {
+            for (let row = 0; row < gridData.length; row++) {
+                for (let col = 0; col < gridData[row].length; col++) {
+                    if (gridData[row][col] === '' || gridData[row][col] === null || gridData[row][col] === undefined) {
+                        const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                        const input = cell ? cell.querySelector('input') : null;
+                        if (input) {
+                            input.value = '';
+                        }
+                    }
+                }
+            }
+
+            updateProgress();
+            showStatus('🗑️ Grille effacée !', 'info');
+        }
+
+        function newGrid() {
+            window.location.href = '/';
+        }
+
+        function copyShareUrl() {
+            const url = window.location.href
+            navigator.clipboard.writeText(url).then(() => {
+                showStatus('✅ Lien copié dans le presse-papiers !', 'success');
+            }).catch(() => {
+                showStatus('❌ Impossible de copier le lien', 'error');
+            });
+        }
+
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+
+            setTimeout(() => {
+                status.innerHTML = '';
+            }, 4000);
+        }
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                createGrid();
+                // loadProgress(); // Commenté pour éviter les erreurs API au début
+            } catch (error) {
+                console.error("Erreur lors de l'initialisation:", error);
+                showStatus('❌ Erreur lors de l\'initialisation', 'error');
+            }
+        });
+
+        // Auto-sauvegarde toutes les 30 secondes (optionnel)
+        // setInterval(() => {
+        //     saveProgress();
+        // }, 30000);
+
+        // Sauvegarder avant de fermer la page (optionnel)
+        // window.addEventListener('beforeunload', () => {
+        //     saveProgress();
+        // });
+    </script>
+</body>
+</html>
