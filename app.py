@@ -382,42 +382,16 @@ class ExcelHTMLCrosswordParser:
             self.solution.append(solution_row)
 
 # Stockage global des données
-crossword_data = {}
 user_progress = {}
+
+# Créer un dossier permanent pour les grilles
+
+GRIDS_DIR = os.path.join(os.getcwd(), 'persistent_grids') #'/home/CastorOrange/persistent_grids'
+os.makedirs(GRIDS_DIR, exist_ok=True)
 
 @app.route('/')
 def index():
     return render_template('upload.html')
-
-# @app.route('/upload', methods=['POST'])
-# def upload_file():
-#     if 'file' not in request.files:
-#         return jsonify({'error': 'Aucun fichier fourni'}), 400
-#
-#     file = request.files['file']
-#     if file.filename == '':
-#         return jsonify({'error': 'Aucun fichier sélectionné'}), 400
-#
-#     if file and file.filename.lower().endswith(('.htm', '.html')):
-#         try:
-#             # Lire le contenu du fichier
-#             content = file.read().decode('utf-8', errors='ignore')
-#
-#             # Parser le contenu
-#             parser = ExcelHTMLCrosswordParser()
-#             data = parser.parse_excel_html(content)
-#
-#             # Générer un ID unique pour cette grille
-#             grid_id = str(uuid.uuid4())
-#             crossword_data[grid_id] = data
-#
-#             return jsonify({'success': True, 'redirect': f'/crossword/{grid_id}'})
-#
-#         except Exception as e:
-#             app.logger.error(f"Erreur lors du parsing: {str(e)}")
-#             return jsonify({'error': f'Erreur lors du traitement: {str(e)}'}), 500
-#
-#     return jsonify({'error': 'Format de fichier non supporté. Utilisez un fichier .htm ou .html'}), 400
 
 def parse_excel_grid(df):
     """
@@ -447,6 +421,10 @@ def parse_excel_grid(df):
 
     return {"grid": grid, "clues": clues}
 
+def save_grid(grid_id, grid_data):
+    filepath = os.path.join(GRIDS_DIR, f"{grid_id}.json")
+    with open(filepath, 'w') as f:
+        json.dump(grid_data, f)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -462,6 +440,10 @@ def upload_file():
         try:
             excel_data = pd.read_excel(file, sheet_name=None, header=None)  # toutes les feuilles
             first_sheet = list(excel_data.values())[0]
+            corrected_data = None
+            if len(excel_data.values()) > 1:
+                correction = list(excel_data.values())[1]
+                corrected_data = parse_excel_grid(correction)
             # rows = first_sheet.to_dict(orient="records")
 
             # Transformer
@@ -469,7 +451,9 @@ def upload_file():
 
             # Sauvegarde avec ID
             grid_id = str(uuid.uuid4())
-            crossword_data[grid_id] = data
+            # crossword_data[grid_id] = {'data': data, 'correction': corrected_data}
+            grid_data = {'data': data, 'correction': corrected_data}
+            save_grid(grid_id, grid_data)
 
             return jsonify({'success': True, 'redirect': f'/crossword/{grid_id}'})
 
@@ -479,21 +463,36 @@ def upload_file():
 
     return jsonify({'error': 'Format de fichier non supporté. Utilisez un fichier .xlsx'}), 400
 
+def load_grid(grid_id):
+    filepath = os.path.join(GRIDS_DIR, f"{grid_id}.json")
+    if os.path.exists(filepath):
+        with open(filepath, 'r') as f:
+            return json.load(f)
+    return None
+
 @app.route('/crossword/<grid_id>')
 def crossword(grid_id):
-    if grid_id not in crossword_data:
+    crossword_data = load_grid(grid_id)
+    if crossword_data is None:
         return redirect('/')
 
-    data = crossword_data[grid_id]
+    data = crossword_data['data']
+    correction_data = crossword_data['correction']
+    if correction_data is not None:
+        correction = correction_data['clues']
+    else:
+        correction = None
+
     return render_template('crossword.html',
                          grid=data['grid'],
                          clues=data['clues'],
+                         correction=correction,
                          grid_id=grid_id)
 
 @app.route('/api/save_progress/<grid_id>', methods=['POST'])
 def save_progress(grid_id):
-    if grid_id not in crossword_data:
-        return jsonify({'error': 'Grille invalide'}), 400
+    # if grid_id not in crossword_data:
+    #     return jsonify({'error': 'Grille invalide'}), 400
 
     progress_data = request.json
     user_progress[grid_id] = {
@@ -505,18 +504,19 @@ def save_progress(grid_id):
 
 @app.route('/api/load_progress/<grid_id>')
 def load_progress(grid_id):
-    if grid_id not in user_progress:
-        return jsonify({'progress': {}})
+    # if grid_id not in user_progress:
+    #     return jsonify({'progress': {}})
 
     return jsonify({'progress': user_progress[grid_id]['data']})
 
 @app.route('/api/debug/<grid_id>')
 def debug_info(grid_id):
     """Endpoint pour déboguer les données de parsing"""
-    if grid_id not in crossword_data:
-        return jsonify({'error': 'Grille invalide'}), 400
+    # if grid_id not in crossword_data:
+    #     return jsonify({'error': 'Grille invalide'}), 400
 
-    data = crossword_data[grid_id]
+    # data = crossword_data[grid_id]['data']
+    data = load_grid(grid_id)['data']
     return jsonify({
         'grid_size': f"{len(data['grid'])}x{len(data['grid'][0]) if data['grid'] else 0}",
         'total_clues': len(data['clues']['horizontal']) + len(data['clues']['vertical']),

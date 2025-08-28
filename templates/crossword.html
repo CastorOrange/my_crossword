@@ -79,6 +79,8 @@
             word-break: break-word;
             hyphens: auto;
             overflow: hidden;
+            cursor: help;
+            user-select: none;
         }
 
         .grid-cell.white {
@@ -247,6 +249,53 @@
                 font-size: 7px;
             }
         }
+
+        /* Styles pour les tooltips */
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            line-height: 1.4;
+            max-width: 250px;
+            word-wrap: break-word;
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .tooltip.show {
+            opacity: 1;
+        }
+
+        .tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: rgba(0, 0, 0, 0.9) transparent transparent transparent;
+        }
+
+        /* Style pour les cases noires sur mobile (tactile) */
+        .grid-cell.black.touched {
+            background-color: #555 !important;
+        }
+
+        /* Responsive pour les tooltips */
+        @media (max-width: 768px) {
+            .tooltip {
+                font-size: 14px;
+                max-width: 200px;
+                padding: 10px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -258,9 +307,9 @@
 
         <div class="content">
             <div class="controls">
-                <button class="btn" onclick="saveProgress()">💾 Sauvegarder</button>
-                <button class="btn secondary" onclick="loadProgress()">📁 Charger</button>
-                <button class="btn secondary" onclick="clearGrid()">🗑️ Effacer</button>
+<!--                <button class="btn" onclick="saveProgress()">💾 Sauvegarder</button>-->
+<!--                <button class="btn secondary" onclick="loadProgress()">📂 Charger</button>-->
+                <button class="btn secondary" onclick="checkCorrection()">✅ Vérifier les réponses</button>
                 <button class="btn secondary" onclick="newGrid()">🏠 Nouveau</button>
                 <button class="btn secondary" onclick="toggleDebug()">🔍 Debug</button>
                 <button class="btn secondary" onclick="copyShareUrl()">📋 Copier le lien</button>
@@ -287,13 +336,16 @@
                 </div>
             </div>
         </div>
+        <!-- Tooltip element -->
+        <div class="tooltip" id="tooltip"></div>
     </div>
 
     <script>
-        // Debug: Affichage des données reçues
-        console.log("=== DONNÉES REÇUES ===");
+        // Debug: Affichage des données reÃ§ues
+        console.log("=== DONNÃ‰ES REÃ‡UES ===");
         let gridData = {{ grid | tojsonfilter | safe }};
         let cluesData = {{ clues | tojsonfilter | safe }};
+        let correctionData = {{ correction | tojsonfilter | safe }};
         let gridId = '{{ grid_id if grid_id else "default" }}';
 
         try {
@@ -309,7 +361,7 @@
 
         } catch (error) {
             console.error("Erreur lors du chargement des données:", error);
-            showStatus('❌ Erreur lors du chargement des données', 'error');
+            showStatus('âŒ Erreur lors du chargement des données', 'error');
 
             // Données de fallback pour test
             const gridData = [
@@ -318,7 +370,7 @@
                 ['#', '', '#', '', '#', '']
             ];
             const cluesData = [
-                {row: 0, col: 0, text: 'Test ↴\nDéfinition ↓'}
+                {row: 0, col: 0, text: 'Test â†´\nDéfinition â†"'}
             ];
             const gridId = 'fallback';
         }
@@ -331,7 +383,7 @@
             if (debugInfo.style.display === 'none') {
                 debugInfo.style.display = 'block';
                 debugInfo.textContent = `
-DONNÉES DE DEBUG:
+DONNÃ‰ES DE DEBUG:
 ================
 
 Grid Data: ${JSON.stringify(gridData, null, 2)}
@@ -358,13 +410,136 @@ Navigateur: ${navigator.userAgent}
             }
             return lookup;
         }
+        function checkCorrection() {
+            if (!correctionData || !Array.isArray(correctionData)) {
+                console.error('Données de correction invalides');
+                return { error: 'Données de correction invalides' };
+            }
+
+            let totalCells = 0;
+            let correctCells = 0;
+            let wrongCells = 0;
+            let emptyCells = 0;
+            let results = [];
+
+            // Parcourir toutes les données de correction
+            correctionData.forEach(correction => {
+                const { row, col, text } = correction;
+
+                // Ignorer les cases noires (définitions) et les caractÃ¨res spéciaux
+                if (gridData[row][col] === '#') {
+                    return;
+                }
+
+                // Récupérer la case correspondante dans la grille DOM
+                const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                if (!cell || !cell.classList.contains('white')) {
+                    return;
+                }
+
+                const input = cell.querySelector('input');
+                if (!input) {
+                    return;
+                }
+
+                totalCells++;
+                const userValue = input.value.trim().toLowerCase();
+                const correctValue = text.trim().toLowerCase();
+
+                if (userValue === '') {
+                    emptyCells++;
+                    results.push({
+                        row,
+                        col,
+                        status: 'empty',
+                        userValue: '',
+                        correctValue: correctValue,
+                        element: cell
+                    });
+                } else if (userValue === correctValue) {
+                    correctCells++;
+                    results.push({
+                        row,
+                        col,
+                        status: 'correct',
+                        userValue: userValue,
+                        correctValue: correctValue,
+                        element: cell
+                    });
+                } else {
+                    wrongCells++;
+                    results.push({
+                        row,
+                        col,
+                        status: 'wrong',
+                        userValue: userValue,
+                        correctValue: correctValue,
+                        element: cell
+                    });
+                }
+            });
+
+            // Calculer les statistiques
+            const completionRate = totalCells > 0 ? Math.round(((correctCells + wrongCells) / totalCells) * 100) : 0;
+            const accuracyRate = (correctCells + wrongCells) > 0 ? Math.round((correctCells / (correctCells + wrongCells)) * 100) : 0;
+            const overallScore = totalCells > 0 ? Math.round((correctCells / totalCells) * 100) : 0;
+            const summary =  {
+                    isComplete: emptyCells === 0,
+                    isPerfect: wrongCells === 0 && emptyCells === 0,
+                    needsWork: wrongCells > 0
+                }
+
+            const stats = `
+                ${summary.isPerfect ? '🏆 Félicitations vous avez terminé, voici un adorable castor 🎉🦫 → ' :
+                      summary.isComplete ? '⚠️  Terminé avec erreurs → ' :
+                      ''}
+                ✅ Réponses correctes: ${correctCells} |
+                ❌ Erreurs: ${wrongCells} |
+                📈 Taux de précision: ${accuracyRate}% (sur les cases remplies)
+
+                    `
+
+            if (summary.isPerfect) {
+                showPerformances(stats, 'success', 0);
+            } else if (completionRate < 30) {
+                showPerformances('Remplissez au moins un tier de la grille avant de vérifier 🤔', 'info', 5000);
+            } else if (wrongCells === 0) {
+              showPerformances(stats, 'success', 5000);
+            } else {
+              showPerformances(stats, 'error', 5000);
+            }
+
+            return {
+                success: true,
+                totalCells,
+                correctCells,
+                wrongCells,
+                emptyCells,
+                completionRate,
+                accuracyRate,
+                overallScore,
+                results,
+                summary
+            };
+        }
+
+        function showPerformances(message, type, duration) {
+            const status = document.getElementById('status');
+            status.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+
+            if (duration && duration > 0) {
+                setTimeout(() => {
+                    status.innerHTML = '';
+                }, duration);
+            }
+        }
 
         function createGrid() {
             const grid = document.getElementById('crosswordGrid');
             grid.innerHTML = '';
 
             if (!gridData || !Array.isArray(gridData)) {
-                grid.innerHTML = '<div style="color: red; padding: 20px;">❌ Erreur: Données de grille invalides</div>';
+                grid.innerHTML = '<div style="color: red; padding: 20px;">⛔ Erreur: Données de grille invalides</div>';
                 return;
             }
 
@@ -394,9 +569,12 @@ Navigateur: ${navigator.userAgent}
                         const clueText = cluesLookup[clueKey];
                         if (clueText) {
                             cell.innerHTML = clueText.replace(/\n/g, '<br>');
+                            cell.setAttribute('data-tooltip', clueText.replace(/<br>/g, '\n'));
+                            setupTooltipEvents(cell);
                         } else {
                             cell.innerHTML = '●'; // Point si pas de définition
                         }
+
                     } else if (cellValue === '' || cellValue === null || cellValue === undefined) {
                         // Case blanche pour saisie
                         cell.classList.add('white');
@@ -567,6 +745,9 @@ Navigateur: ${navigator.userAgent}
             const progressBar = document.getElementById('progress');
             progressBar.style.width = percentage + '%';
             progressBar.textContent = percentage + '%';
+            if (percentage === 100) {
+                checkCorrection();
+            }
         }
 
         function saveProgress() {
@@ -597,7 +778,7 @@ Navigateur: ${navigator.userAgent}
                 if (data.success) {
                     showStatus('✅ Progression sauvegardée !', 'success');
                 } else {
-                    showStatus('❌ Erreur lors de la sauvegarde', 'error');
+                    showStatus('⛔ Erreur lors de la sauvegarde', 'error');
                 }
             })
             .catch(error => {
@@ -628,7 +809,7 @@ Navigateur: ${navigator.userAgent}
                 showStatus('✅ Progression chargée !', 'success');
             })
             .catch(error => {
-                showStatus('❌ Erreur lors du chargement', 'error');
+                showStatus('⛔ Erreur lors du chargement', 'error');
             });
         }
 
@@ -658,7 +839,7 @@ Navigateur: ${navigator.userAgent}
             navigator.clipboard.writeText(url).then(() => {
                 showStatus('✅ Lien copié dans le presse-papiers !', 'success');
             }).catch(() => {
-                showStatus('❌ Impossible de copier le lien', 'error');
+                showStatus('⛔ Impossible de copier le lien', 'error');
             });
         }
 
@@ -671,14 +852,112 @@ Navigateur: ${navigator.userAgent}
             }, 4000);
         }
 
+        // Variables pour les tooltips
+        let tooltip = document.getElementById('tooltip');
+        let tooltipTimeout = null;
+        let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+        // Configuration des événements tooltip
+        function setupTooltipEvents(cell) {
+            if (isMobile) {
+                // Sur mobile : clic pour afficher/masquer
+                cell.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const tooltipText = this.getAttribute('data-tooltip');
+                    if (tooltipText && tooltipText.trim()) {
+                        showTooltip(this, tooltipText);
+                        // Auto-masquer après 3 secondes
+                        // setTimeout(() => hideTooltip(), 3000);
+                    }
+                });
+
+                // Effet visuel lors du touch
+                cell.addEventListener('touchstart', function() {
+                    this.classList.add('touched');
+                });
+
+                cell.addEventListener('touchend', function() {
+                    setTimeout(() => this.classList.remove('touched'), 150);
+                });
+
+            } else {
+                // Sur desktop : hover
+                cell.addEventListener('mouseenter', function(e) {
+                    const tooltipText = this.getAttribute('data-tooltip');
+                    if (tooltipText && tooltipText.trim()) {
+                        clearTimeout(tooltipTimeout);
+                        showTooltip(this, tooltipText);
+                    }
+                });
+
+                cell.addEventListener('mouseleave', function() {
+                    tooltipTimeout = setTimeout(() => hideTooltip(), 100);
+                });
+
+                // Suivre la souris
+                cell.addEventListener('mousemove', function(e) {
+                    if (tooltip.classList.contains('show')) {
+                        positionTooltip(e);
+                    }
+                });
+            }
+        }
+
+        // Afficher le tooltip
+        function showTooltip(element, text) {
+            tooltip.textContent = text;
+            tooltip.classList.add('show');
+
+            if (isMobile) {
+                // Sur mobile, positionner au-dessus de la cellule
+                const rect = element.getBoundingClientRect();
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+
+                tooltip.style.left = (rect.left + scrollLeft + rect.width / 2 - tooltip.offsetWidth / 2) + 'px';
+                tooltip.style.top = (rect.top + scrollTop - tooltip.offsetHeight - 10) + 'px';
+            }
+        }
+
+        // Masquer le tooltip
+        function hideTooltip() {
+            tooltip.classList.remove('show');
+        }
+
+        // Positionner le tooltip (desktop)
+        function positionTooltip(e) {
+            const tooltipWidth = tooltip.offsetWidth;
+            const tooltipHeight = tooltip.offsetHeight;
+
+            let left = e.pageX - tooltipWidth / 2;
+            let top = e.pageY - tooltipHeight - 10;
+
+            // Ajuster si le tooltip sort de l'écran
+            if (left < 10) left = 10;
+            if (left + tooltipWidth > window.innerWidth - 10) {
+                left = window.innerWidth - tooltipWidth - 10;
+            }
+            if (top < 10) top = e.pageY + 10;
+
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = top + 'px';
+        }
+
+        // Masquer le tooltip si on clique ailleurs (mobile)
+        document.addEventListener('click', function(e) {
+            if (isMobile && !e.target.classList.contains('black')) {
+                hideTooltip();
+            }
+        });
+
         // Initialisation
         document.addEventListener('DOMContentLoaded', function() {
             try {
                 createGrid();
-                loadProgress(); // Commenté pour éviter les erreurs API au début
+                // loadProgress(); // Commenté pour éviter les erreurs API au début
             } catch (error) {
                 console.error("Erreur lors de l'initialisation:", error);
-                showStatus('❌ Erreur lors de l\'initialisation', 'error');
+                showStatus('⛔ Erreur lors de l\'initialisation', 'error');
             }
         });
 
