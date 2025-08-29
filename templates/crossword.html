@@ -626,6 +626,14 @@ Navigateur: ${navigator.userAgent}
             }
         }
 
+        // Fonction pour vérifier si une case est noire
+        function isBlackCell(row, col) {
+            if (row < 0 || row >= gridData.length || col < 0 || col >= gridData[0].length) {
+                return true; // Traiter les cases hors limites comme des cases noires
+            }
+            return gridData[row][col] === '#';
+        }
+
         function handleKeydown(event) {
             const row = parseInt(event.target.parentElement.dataset.row);
             const col = parseInt(event.target.parentElement.dataset.col);
@@ -659,6 +667,10 @@ Navigateur: ${navigator.userAgent}
             }
         }
 
+        // Variables pour tracker les cases précédentes
+        let previousCell = null;
+        let lastEditedCell = null;
+
         function selectCell(row, col) {
             if (selectedCell) {
                 selectedCell.classList.remove('selected');
@@ -666,9 +678,48 @@ Navigateur: ${navigator.userAgent}
 
             const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
             if (cell && cell.classList.contains('white')) {
+                // Stocker la case précédente
+                previousCell = selectedCell;
                 selectedCell = cell;
                 cell.classList.add('selected');
                 cell.querySelector('input').focus();
+
+                // Déterminer la direction basée sur la position des cases noires adjacentes
+                const currentRow = parseInt(row);
+                const currentCol = parseInt(col);
+
+                // Vérifier si cette case est adjacente à la précédente éditée
+                const isAdjacentToPrevious = lastEditedCell &&
+                    Math.abs(currentRow - parseInt(lastEditedCell.dataset.row)) <= 1 &&
+                    Math.abs(currentCol - parseInt(lastEditedCell.dataset.col)) <= 1 &&
+                    (currentRow === parseInt(lastEditedCell.dataset.row) || currentCol === parseInt(lastEditedCell.dataset.col));
+
+                if (!isAdjacentToPrevious) {
+                    // Case non adjacente à la précédente - déterminer direction par cases noires
+                    const hasBlackLeft = isBlackCell(currentRow, currentCol - 1);
+                    const hasBlackAbove = isBlackCell(currentRow - 1, currentCol);
+
+                    if (hasBlackLeft && !hasBlackAbove) {
+                        currentDirection = 'horizontal';
+                    } else if (hasBlackAbove && !hasBlackLeft) {
+                        currentDirection = 'vertical';
+                    } else if (hasBlackLeft && hasBlackAbove) {
+                        currentDirection = 'horizontal'; // priorité droite
+                    }
+                    // Sinon garder la direction courante
+                } else {
+                    // Case adjacente - déterminer la direction selon l'adjacence
+                    const lastRow = parseInt(lastEditedCell.dataset.row);
+                    const lastCol = parseInt(lastEditedCell.dataset.col);
+
+                    if (currentRow === lastRow && Math.abs(currentCol - lastCol) === 1) {
+                        // Cases adjacentes horizontalement
+                        currentDirection = 'horizontal';
+                    } else if (currentCol === lastCol && Math.abs(currentRow - lastRow) === 1) {
+                        // Cases adjacentes verticalement
+                        currentDirection = 'vertical';
+                    }
+                }
             }
         }
 
@@ -678,10 +729,102 @@ Navigateur: ${navigator.userAgent}
             const row = parseInt(selectedCell.dataset.row);
             const col = parseInt(selectedCell.dataset.col);
 
+            // Marquer cette case comme dernière éditée
+            lastEditedCell = selectedCell;
+
+            // Vérifier si on a édité 2 cases adjacentes dans la même direction
+            if (previousCell) {
+                const prevRow = parseInt(previousCell.dataset.row);
+                const prevCol = parseInt(previousCell.dataset.col);
+
+                // Cas 1: 2 cases adjacentes vers la droite
+                if (row === prevRow && col === prevCol + 1) {
+                    // Se déplacer vers la droite, en sautant les cases qui contiennent du texte
+                    let nextCol = col + 1;
+                    while (nextCol < gridData[row].length) {
+                        const nextCell = document.querySelector(`[data-row="${row}"][data-col="${nextCol}"]`);
+                        if (nextCell && nextCell.classList.contains('white')) {
+                            const nextInput = nextCell.querySelector('input');
+                            if (!nextInput.value.trim()) {
+                                // Case vide trouvée -> s'y déplacer
+                                selectCell(row, nextCol);
+                                return;
+                            }
+                        } else {
+                            // Case noire rencontrée -> arrêter la recherche, aller vers le bas
+                            break;
+                        }
+                        nextCol++;
+                    }
+                    // Si aucune case vide trouvée sur la ligne -> aller vers le bas
+                    moveVertical(row, col, 1);
+                    return;
+                }
+
+                // Cas 2: 2 cases adjacentes vers le bas
+                if (col === prevCol && row === prevRow + 1) {
+                    // Se déplacer vers le bas, en sautant les cases qui contiennent du texte
+                    let nextRow = row + 1;
+                    while (nextRow < gridData.length) {
+                        const nextCell = document.querySelector(`[data-row="${nextRow}"][data-col="${col}"]`);
+                        if (nextCell && nextCell.classList.contains('white')) {
+                            const nextInput = nextCell.querySelector('input');
+                            if (!nextInput.value.trim()) {
+                                // Case vide trouvée -> s'y déplacer
+                                selectCell(nextRow, col);
+                                return;
+                            }
+                        } else {
+                            // Case noire rencontrée -> arrêter la recherche, aller vers la droite
+                            break;
+                        }
+                        nextRow++;
+                    }
+                    // Si aucune case vide trouvée sur la colonne -> aller vers la droite
+                    moveHorizontal(row, col, 1);
+                    return;
+                }
+            }
+
+            // Utiliser la direction courante pour les autres cas
             if (currentDirection === 'horizontal') {
-                moveHorizontal(row, col, 1);
+                // Se déplacer vers la droite, en sautant les cases qui contiennent du texte
+                let nextCol = col + 1;
+                while (nextCol < gridData[row].length) {
+                    const nextCell = document.querySelector(`[data-row="${row}"][data-col="${nextCol}"]`);
+                    if (nextCell && nextCell.classList.contains('white')) {
+                        const nextInput = nextCell.querySelector('input');
+                        if (!nextInput.value.trim()) {
+                            // Case vide trouvée -> s'y déplacer
+                            selectCell(row, nextCol);
+                            return;
+                        }
+                    } else {
+                        // Case noire rencontrée -> arrêter la recherche, aller vers le bas
+                        break;
+                    }
+                    nextCol++;
+                }
+                // moveHorizontal(row, col, 1);
             } else {
-                moveVertical(row, col, 1);
+                // Se déplacer vers le bas, en sautant les cases qui contiennent du texte
+                let nextRow = row + 1;
+                while (nextRow < gridData.length) {
+                    const nextCell = document.querySelector(`[data-row="${nextRow}"][data-col="${col}"]`);
+                    if (nextCell && nextCell.classList.contains('white')) {
+                        const nextInput = nextCell.querySelector('input');
+                        if (!nextInput.value.trim()) {
+                            // Case vide trouvée -> s'y déplacer
+                            selectCell(nextRow, col);
+                            return;
+                        }
+                    } else {
+                        // Case noire rencontrée -> arrêter la recherche, aller vers la droite
+                        break;
+                    }
+                    nextRow++;
+                }
+                // moveVertical(row, col, 1);
             }
         }
 
