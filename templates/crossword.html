@@ -38,7 +38,6 @@
 
         .grid-container {
             flex: 1;
-            min-width: 400px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -235,20 +234,34 @@
         }
 
         @media (max-width: 1080px) {
+            body {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 1rem;
+                margin-bottom: 5px;
+            }
+
+            .header p {
+                font-size: 1rem;
+            }
+
             .crossword-container {
                 flex-direction: column;
             }
 
             .grid-cell {
-                width: 35px;
-                height: 35px;
-                font-size: 12px;
+                width: 10vw;
+                height: 10vw;
+                font-size: 1px;
             }
 
             .grid-cell.black {
-                font-size: 7px;
+                font-size: 1.3vw;
             }
         }
+
 
         /* Styles pour les tooltips */
         .tooltip {
@@ -1048,19 +1061,43 @@ Navigateur: ${navigator.userAgent}
 
         // Afficher le tooltip
         function showTooltip(element, text) {
+            const padding = 10;
+
             tooltip.textContent = text;
             tooltip.classList.add('show');
 
             if (isMobile) {
-                // Sur mobile, positionner au-dessus de la cellule
                 const rect = element.getBoundingClientRect();
                 const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
                 const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
 
-                tooltip.style.left = (rect.left + scrollLeft + rect.width / 2 - tooltip.offsetWidth / 2) + 'px';
-                tooltip.style.top = (rect.top + scrollTop - tooltip.offsetHeight - 10) + 'px';
+                let left = rect.left + scrollLeft + rect.width / 2 - tooltip.offsetWidth / 2;
+                let top;
+
+                // Vérifie la place au-dessus et en dessous de l’élément
+                const spaceAbove = rect.top;
+                const spaceBelow = window.innerHeight - rect.bottom;
+
+                if (spaceAbove > tooltip.offsetHeight + padding) {
+                    // Assez de place au-dessus → placer le tooltip au-dessus
+                    top = rect.top + scrollTop - tooltip.offsetHeight - 8;
+                } else {
+                    // Sinon → placer en dessous
+                    top = rect.bottom + scrollTop + 8;
+                }
+
+                // Ajustement horizontal si ça dépasse à gauche/droite
+                if (left < padding + scrollLeft) left = padding + scrollLeft;
+                if (left + tooltip.offsetWidth > window.innerWidth + scrollLeft - padding) {
+                    left = window.innerWidth + scrollLeft - tooltip.offsetWidth - padding;
+                }
+
+                tooltip.style.left = left + "px";
+                tooltip.style.top = top + "px";
             }
         }
+
+
 
         // Masquer le tooltip
         function hideTooltip() {
